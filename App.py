@@ -1,48 +1,11 @@
-import networkx as nx
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-
-# Charger les données
-data = pd.read_csv('ChampionsLeague22-23.csv', header=None)
-data.drop([0, 2, 7], axis=1, inplace=True)
-data.columns = ['Date', 'Home Team', 'Home Score', 'Away Team', 'Away Score']
-
-past_matches = data.dropna()
-
-# Ajoutez un titre pour le graphique suivant
-st.title("Buts par équipe")
-
-# Calculez le nombre de buts marqués par chaque équipe à domicile et à l'extérieur
-home_goals = data.groupby('Home Team')['Home Score'].sum().reset_index()
-away_goals = data.groupby('Away Team')['Away Score'].sum().reset_index()
-
-# Fusionner les buts à domicile et à l'extérieur et calculer le total
-home_goals.columns = ['Team', 'Goals']
-away_goals.columns = ['Team', 'Goals']
-total_goals = pd.concat([home_goals, away_goals], ignore_index=True)
-total_goals = total_goals.groupby('Team')['Goals'].sum().reset_index()
-
-# Trier les équipes par le nombre total de buts marqués
-total_goals = total_goals.sort_values(by='Goals', ascending=False)
-
-# Créer un graphique à barres
-fig = plt.figure(figsize=(12, 6))
-sns.barplot(x='Team', y='Goals', data=total_goals)
-plt.xticks(rotation=90)
-plt.title("Nombre de buts marqués par équipe")
-
-# Afficher le graphique dans Streamlit
-st.pyplot(fig)
-
-import streamlit as st
-import pandas as pd
 import textwrap
 import matplotlib.pyplot as plt
 from DataTeam import get_team_stats, get_all_players
 from DataPlayer import get_player_details, get_player_honours
-from config import collection
+from config import collection, collection2
 st.set_page_config(page_title="Projet Final Data IA", page_icon="⚽", layout="wide")
 
 ##########################################################################################################
@@ -52,10 +15,16 @@ st.set_page_config(page_title="Projet Final Data IA", page_icon="⚽", layout="w
 ##########################################################################################################
 
 @st.cache_data
-def get_records_from_mongo():
+def getMongoData():
     records = collection.find({}, {'_id': 0})
     dfStatsMongo = pd.DataFrame(list(records))
     return dfStatsMongo
+
+@st.cache_data
+def getMongoData2():
+    records = collection2.find({}, {'_id': 0})
+    dfJoueursDecisifsMongo = pd.DataFrame(list(records))
+    return dfJoueursDecisifsMongo
 
 ##########################################################################################################
 #                                                                                                        #
@@ -63,16 +32,16 @@ def get_records_from_mongo():
 #                                                                                                        #
 ##########################################################################################################
 
-
 # Sidebar - Navigation
 st.sidebar.title("Navigation")
 page_selection = st.sidebar.radio("Go to", ["Home", "Analysis"])
 
 # Sidebar - Affichage
 st.sidebar.title("Affichage")
-show_team_stats = st.sidebar.checkbox("Afficher les statistiques de l'équipe", value=False)
-show_player_stats = st.sidebar.checkbox("Afficher les statistiques des joueurs de la ldc 2021-22", value=False)
-show_player_stats_22_23 = st.sidebar.checkbox("Afficher les statistiques des joueurs sur la saison 2022-23", value=False)
+show_stats_equipe = st.sidebar.checkbox("Afficher les statistiques de l'équipe", value=False)
+show_stats_joueurs_LDC = st.sidebar.checkbox("Afficher les statistiques des joueurs de la ldc 2021-22", value=False)
+show_stats_joueurs_22_23 = st.sidebar.checkbox("Afficher les statistiques des joueurs sur la saison 2022-23", value=False)
+show_joueurs_decisifs = st.sidebar.checkbox("Afficher les joueurs décisifs de la ldc 2021-22", value=False)
 
 # Fonction pour la page d'accueil
 def home():
@@ -102,10 +71,12 @@ def home():
     
     
     # Ajout des informations sur Karim Benzema
-    st.title("Karim Benzema")
-    player_details = get_player_details("34146309")
+    id_player = 34146309 #id récupéré sur TheSportsDB
+    
+    player_details = get_player_details(id_player)
 
     if player_details is not None:
+        st.title(player_details['strPlayer'])
         st.image(player_details['strCutout'], width=200)  # Image du joueur
         st.write("## Biographie")
         st.write(player_details['strDescriptionFR'])  # Biographie du joueur
@@ -120,10 +91,8 @@ def home():
     else:
         st.write("Désolé, aucune information n'a été trouvée pour ce joueur.")
 
-
 # Fonction pour la page d'analyse
 def analysis():
-
 
     ##########################################################################################################
     #                                                                                                        #
@@ -138,7 +107,8 @@ def analysis():
     # Obtenez la liste de tous les joueurs de la Ligue des Champions
     champions_league_players = get_all_players(champions_league_id)
     
-    dfStatsMongo = get_records_from_mongo()
+    dfStatsMongo = getMongoData()
+    dfJoueursDecisifsMongo = getMongoData2()
 
     # Créez une liste des noms des joueurs de la Ligue des Champions
     if champions_league_players is not None:
@@ -148,6 +118,11 @@ def analysis():
 
     # Créez un nouveau DataFrame contenant uniquement les joueurs qui participent à la Ligue des Champions 21-22
     dfStats = dfStatsMongo[dfStatsMongo["Joueur"].isin(champions_league_player_names)]
+    # Compter le nombre de joueurs uniques dans chaque équipe
+    player_counts = dfStats.groupby('Équipe')['Joueur'].nunique()
+
+    # Filtrer les équipes qui ont plus d'un joueur
+    dfStats = dfStats[dfStats['Équipe'].isin(player_counts[player_counts > 1].index)]
 
     # Convertir la colonne 'Buts' en un type numérique
     dfStatsMongo['Buts'] = pd.to_numeric(dfStats['Buts'], errors='coerce')
@@ -156,7 +131,7 @@ def analysis():
     dfStatsMongo['P.D.'] = pd.to_numeric(dfStats['P.D.'], errors='coerce')
     dfStats['P.D.'] = pd.to_numeric(dfStats['P.D.'], errors='coerce')
     
-        # Préparez les données pour Streamlit
+    # Préparation des données pour l'affichage
     data = {
         "Équipe": list(win_percentages.keys()),
         "Nombre de matchs joués": list(team_matches.values()),
@@ -164,6 +139,11 @@ def analysis():
         "Moy de but / matchs": list(average_goals_per_match.values()),
     }
     df = pd.DataFrame(data)
+    
+    # Charger les données du csv
+    data = pd.read_csv('ChampionsLeague22-23.csv', header=None)
+    data.drop([0, 2, 7], axis=1, inplace=True)
+    data.columns = ['Date', 'Home Team', 'Home Score', 'Away Team', 'Away Score']
 
     ##########################################################################################################
     #                                                                                                        #
@@ -171,37 +151,82 @@ def analysis():
     #                                                                                                        #
     ##########################################################################################################
         
-        # Condition pour afficher les statistiques de l'équipe
-    if show_team_stats:
-        st.title("UEFA Champions League 2021/2022 Statistics")
+    # Condition pour afficher les statistiques des équipes
+    if show_stats_equipe:
+        st.title("Statistiques des équipes de l'UEFA Champions League 2021/22 ")
         st.dataframe(df)
 
     # Condition pour afficher les statistiques des joueurs
-    if show_player_stats:
-        st.write("# Statistiques des joueurs de la Ligue des Champions")
+    if show_stats_joueurs_LDC:
+        st.write("# Statistiques des joueurs pendant la Ligue des Champions 2021/22")
         st.dataframe(dfStats)
     
     # Affichez les statistiques des joueurs pour la saison 22-23
-    if show_player_stats_22_23:
-        st.write("# Statistiques des joueurs pour la saison 22-23")
+    if show_stats_joueurs_22_23:
+        st.write("# Statistiques des joueurs sur la saison 2022-23")
         st.dataframe(dfStatsMongo) 
+        
+    # Affichez les joueurs décisifs de la LDC 21-22
+    if show_joueurs_decisifs:
+        st.write("# Joueurs Décisifs de la League Des Champions 21-22")
+        st.dataframe(dfJoueursDecisifsMongo) 
 
     #Story Telling
+    
+    st.title("Viualisations des données")
+    
+    st.subheader("Au football, le nombre de but marqué est l'une des choses les plus importantes, c'est cela que l'on retient à la fin d'un match.")
+    st.subheader("Voici le nombre de but marqués pour chaques équipes au cours de la LDC 2021/22: ")
+    # Calculez le nombre de buts marqués par chaque équipe à domicile et à l'extérieur
+    home_goals = data.groupby('Home Team')['Home Score'].sum().reset_index()
+    away_goals = data.groupby('Away Team')['Away Score'].sum().reset_index()
 
-    real_madrid_wins = df[df['Équipe'] == 'Real Madrid']['% de victoire'].values[0]
-    other_teams_wins = df[df['Équipe'] != 'Real Madrid']['% de victoire']
+    # Fusionner les buts à domicile et à l'extérieur et calculer le total
+    home_goals.columns = ['Team', 'Goals']
+    away_goals.columns = ['Team', 'Goals']
+    total_goals = pd.concat([home_goals, away_goals], ignore_index=True)
+    total_goals = total_goals.groupby('Team')['Goals'].sum().reset_index()
 
-    plt.figure(figsize=(10, 6))
-    plt.hist([real_madrid_wins, other_teams_wins], bins=20, alpha=0.5, label=['Real Madrid', 'Other Teams'])
-    plt.legend(loc='upper right')
-    plt.xlabel('% de victoire')
-    plt.ylabel('Nombre d\'équipes')
-    plt.title('Distribution des victoires du Real Madrid par rapport aux autres équipes')
+    # Trier les équipes par le nombre total de buts marqués
+    total_goals = total_goals.sort_values(by='Goals', ascending=False)
+
+    fig = plt.figure(figsize=(12, 6))
+    sns.barplot(x='Team', y='Goals', data=total_goals)
+    plt.xticks(rotation=90)
+    plt.title("Nombre de buts marqués par équipe durant la LDC 2021/22")
+
+    st.pyplot(fig)
+    
+    st.subheader("Examinons maintenant la distribution des buts par joueur pour chaque équipe.")
+
+    plt.figure(figsize=(12, 6))
+    sns.boxplot(x='Équipe', y='Buts', data=dfStats)
+    plt.xticks(rotation=90)
+    plt.title("Distribution des buts par joueur pour chaque équipe")
     st.pyplot(plt)
 
+    st.title("Le Real Madrid dans la LDC")
+    st.subheader("Une équipe des plus importante de la compétition, 13 fois victorieuse du titre et présente chaques années dans cette compétition prestigieuse.")
+    
+    #Focus sur le Réal
+    st.subheader("Le Real, de superbes statistiques en LDC :")
+    
+    #Graphs %Victoires vs les autres équipes
+    # Suppressions des équipes avec 0% de victoires
+    df_filtrer = df[df['% de victoire'] > 0]
+    # Tri les équipes par pourcentage de victoires
+    df_trier = df_filtrer.sort_values(by='% de victoire', ascending=True)
+    colors = ['red' if x == 'Real Madrid' else 'blue' for x in df_trier['Équipe']]
+
+    plt.figure(figsize=(10, 10))
+    plt.barh(df_trier['Équipe'], df_trier['% de victoire'], color=colors)
+    plt.xlabel('% de victoire')
+    plt.title('Pourcentage de victoires par équipe')
+    st.pyplot(plt)
+        
     real_madrid_goals = df[df['Équipe'] == 'Real Madrid']['Moy de but / matchs'].values[0]
     other_teams_goals = df[df['Équipe'] != 'Real Madrid']['Moy de but / matchs']
-
+    #Graphs Buts/équipes
     plt.figure(figsize=(10, 6))
     plt.hist([real_madrid_goals, other_teams_goals], bins=20, alpha=0.5, label=['Real Madrid', 'Other Teams'])
     plt.legend(loc='upper right')
@@ -209,10 +234,12 @@ def analysis():
     plt.ylabel('Nombre d\'équipes')
     plt.title('Buts moyens par match pour le Real Madrid par rapport aux autres équipes')
     st.pyplot(plt)
-
+    
+    
+    st.subheader("Le Real possède de grands joueurs avec de belles stats :")
     real_madrid_players = dfStats[dfStats['Équipe'] == 'Real Madrid']
     top_scorers = real_madrid_players.nlargest(5, 'Buts')
-
+    #Graphs buts/Joueurs
     plt.figure(figsize=(10, 6))
     plt.barh(top_scorers['Joueur'], top_scorers['Buts'], color='skyblue')
     plt.xlabel('Nombre de buts')
@@ -222,7 +249,7 @@ def analysis():
     st.pyplot(plt)
 
     top_assist = real_madrid_players.nlargest(5, 'P.D.')
-
+    #Graphs passesD/Joueurs
     plt.figure(figsize=(10, 6))
     plt.barh(top_assist['Joueur'], top_assist['P.D.'], color='skyblue')
     plt.xlabel('Nombre de passes décisives')
@@ -230,29 +257,7 @@ def analysis():
     plt.title('Top 5 des joueurs du Real Madrid avec le plus de passes décisives')
     plt.gca().invert_yaxis()
     st.pyplot(plt)
-
-    # Create color map
-    colors = {True: 'blue', False: 'gray'}
-    df['IsRealMadrid'] = df['Équipe'] == 'Real Madrid'
-
-    fig, ax = plt.subplots(figsize=(14,8))
-
-    # Create a scatter plot with varying bubble sizes. Use the 'Nombre de matchs joués' for the size of the bubbles.
-    bubble = ax.scatter(df['Moy de but / matchs'], df['% de victoire'], s=df['Nombre de matchs joués']*10, 
-                        c=df['IsRealMadrid'].apply(lambda x: colors[x]), alpha=0.6, edgecolors="w", linewidth=2)
-
-    # Add labels to the bubbles
-    for i, txt in enumerate(df['Équipe']):
-        ax.annotate(txt, (df['Moy de but / matchs'].iat[i],df['% de victoire'].iat[i]))
-
-    ax.set_xlabel("Moyenne de buts par match")
-    ax.set_ylabel("Pourcentage de victoires")
-    ax.set_title("Bulle représentant le nombre de matchs joués, le pourcentage de victoires et la moyenne de buts par match")
-
-    # Show the plot
-    plt.show()
-
-# Choisissez la page en fonction de la sélection de la barre latérale
+    
 if page_selection == "Home":
     home()
 elif page_selection == "Analysis":
