@@ -23,9 +23,11 @@ Le projet est constitué de cinq fichiers principaux :
 
 1. `DataTeam.py` :  Ce fichier contient les méthodes python permettant d'utiliser l'API de TheSportsDB à propos des données des équipes.
 2. `DataPlayer.py` : Ce fichier contient les méthodes python permettant d'utiliser l'API de TheSportsDB à propos des données des joueurs.
+2. `Data.py` : Ce fichier contient les méthodes python permettant d'utiliser notre model prédictif.
 3. `StatsJoueursScraping.py`: Ce fichier contient le code pour extraire les données des joueurs à l'aide de BeautifulSoup et Selenium, puis les stocker dans une base de données MongoDB.
-6. `app.py` : Ce fichier contient le code pour créer l'interface web interactive à l'aide de Streamlit. Il permet d'afficher les données extraites et de générer des graphiques pour analyser les différentes données.
-7. `config.py` : Ce fichier contient les informations de configuration pour se connecter à la base de données MongoDB.
+4. `JoueursDecisifScraping.py`: Ce fichier contient le code pour extraire les données des joueurs decisif à l'aide de BeautifulSoup et Selenium, puis les stocker dans une base de données MongoDB.
+5. `App.py` : Ce fichier contient le code pour créer l'interface web interactive à l'aide de Streamlit. Il permet d'afficher les données extraites et de générer des graphiques pour analyser les différentes données.
+6. `config.py` : Ce fichier contient les informations de configuration pour se connecter à la base de données MongoDB.
 
 ## Utilisation
 Avant tout, pour lancer le scraper, exécutez la commande suivante dans votre terminal:
