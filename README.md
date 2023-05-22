@@ -42,8 +42,10 @@ Une fois l'application lancée, ouvrez votre navigateur et accédez à l'URL ind
 
 ## Fonctionnalités
 
-L'interface web permet de :
-
+L'interface web permet de naviguer entre 3 onglets ( Accueil, Analyses et Machine learning ), chacun représentant une partie importante du projet :
+- L'onglet `Accueil` contient des informations sur le Real Madrid ainsi que sur la ligue des champions, cette partie ne comporte pas de diagramme
+- L'onglet `Analyses` contient tout les diagrammes montrant les stats du Réal et qui répondent à notre problèmatique ( "Pourquoi le Réal était destiné à gagner cette ligue des champions" )
+- Tandis que l'onglet `Machine Learning` contient deux diagrammes, l'un portant sur les chances de gagner à domicile et à l'extérieur et l'autre qui permet de faire un pronostics simple entre deux équipes ayant passé les phases de poule de la ligue des champions saison 2021-2022
 
     
 ## Licence
