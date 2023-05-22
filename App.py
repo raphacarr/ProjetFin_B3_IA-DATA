@@ -53,6 +53,7 @@ def Accueil():
     dans la Ligue des champions de l'UEFA. Nous utiliserons des données de match et des statistiques de joueurs 
     pour mieux comprendre comment le Real Madrid se compare aux autres équipes dans la ligue. 
     Nous examinerons également les performances individuelles des joueurs du Real Madrid.
+    De plus, nous créerons un model prédictif pour essayer de prédire des résultats de match éventuels.
     """)
     
     st.write("## Méthodologie")
@@ -223,7 +224,7 @@ def Analyses():
     st.pyplot(plt)
 
     st.title("Le Real Madrid dans la LDC")
-    st.subheader("Une équipe des plus importante de la compétition, 13 fois victorieuse du titre et présente chaques années dans cette compétition prestigieuse.")
+    st.subheader("Une équipe des plus importante de la compétition, 14 fois victorieuse du titre et présente chaques années dans cette compétition prestigieuse.")
     
     #Focus sur le Réal
     st.subheader("Le Real, de superbes statistiques en LDC :")
